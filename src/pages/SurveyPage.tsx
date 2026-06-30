@@ -12,9 +12,10 @@ import {
 import type { SurveyFormData } from '../types'
 
 const INITIAL_FORM: SurveyFormData = {
-  county: '', constituency: '', ward: '',
+  county: 'Meru', constituency: '', ward: '',
   full_name: '', phone_number: '',
   gender: '', age_group: '',
+  preferred_president: '',
   preferred_governor: '', support_reason: '',
   biggest_issue: '', issue_details: '',
 }
@@ -74,15 +75,15 @@ export default function SurveyPage() {
     }
     if (step === 2) {
       if (!form.full_name.trim()) e.full_name = 'Your name is required'
-      if (!form.phone_number.trim()) e.phone_number = 'Phone number is required'
-      else if (!/^0[0-9]{9}$/.test(form.phone_number.replace(/\s/g, '')))
-        e.phone_number = 'Enter a valid Kenyan number (e.g. 0712345678)'
+      if (form.phone_number.trim() && !/^0[0-9]{9}$/.test(form.phone_number.replace(/\s/g, '')))
+        e.phone_number = 'Enter a valid Kenyan M-Pesa number (e.g. 0712345678)'
     }
     if (step === 3) {
       if (!form.gender)    e.gender    = 'Please select your gender'
       if (!form.age_group) e.age_group = 'Please select your age group'
     }
     if (step === 4) {
+      if (!form.preferred_president.trim()) e.preferred_president = 'Please enter a presidential candidate name'
       if (!form.preferred_governor.trim()) e.preferred_governor = 'Please enter a candidate name'
       if (!form.support_reason.trim()) e.support_reason = 'Please tell us why you support them'
       else if (form.support_reason.trim().length < 20) e.support_reason = 'Please write at least 20 characters'
@@ -104,7 +105,7 @@ export default function SurveyPage() {
 
   async function next() {
     if (!validateStep()) return
-    if (step === 2 && isSupabaseConfigured()) {
+    if (step === 2 && isSupabaseConfigured() && form.phone_number.trim()) {
       setCheckingPhone(true)
       try {
         const { data } = await supabase
@@ -113,7 +114,7 @@ export default function SurveyPage() {
           .eq('phone_number', form.phone_number.replace(/\s/g, ''))
           .limit(1)
         if (data && data.length > 0) {
-          setErrors({ phone_number: 'This phone number has already been used to take the survey.' })
+          setErrors({ phone_number: 'This M-Pesa number has already been used to take the survey.' })
           return
         }
       } catch { /* ignore — let submit catch it */ } finally {
@@ -143,8 +144,9 @@ export default function SurveyPage() {
       }
       const { error } = await supabase.from('survey_responses').insert([{
         county: form.county, constituency: form.constituency, ward: form.ward,
-        full_name: form.full_name, phone_number: form.phone_number,
+        full_name: form.full_name, phone_number: form.phone_number || null,
         gender: form.gender, age_group: form.age_group,
+        preferred_president: form.preferred_president,
         preferred_governor: form.preferred_governor, support_reason: form.support_reason,
         biggest_issue: form.biggest_issue, issue_details: form.issue_details,
       }])
@@ -209,6 +211,7 @@ export default function SurveyPage() {
               { label: 'County',             value: form.county },
               { label: 'Constituency',       value: form.constituency },
               { label: 'Name',               value: form.full_name },
+              { label: 'Preferred President', value: form.preferred_president },
               { label: 'Preferred Governor', value: form.preferred_governor },
               { label: 'Top Issue',          value: form.biggest_issue },
             ].map((r) => (
@@ -364,19 +367,22 @@ export default function SurveyPage() {
                     {errors.full_name && <p className="error-text"><AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />{errors.full_name}</p>}
                   </div>
                   <div>
-                    <label className="label">Phone Number *</label>
-                    {/* On mobile, stacked layout to avoid overflow */}
+                    <label className="label">
+                      M-Pesa Number{' '}
+                      <span className="text-gray-400 font-normal text-xs">(optional)</span>
+                    </label>
                     <div className="flex">
                       <span className="inline-flex items-center flex-shrink-0 px-3 sm:px-4 border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm rounded-l-xl whitespace-nowrap">
                         🇰🇪 +254
                       </span>
                       <input type="tel"
                         value={form.phone_number} onChange={(e) => update('phone_number', e.target.value)}
+                        placeholder="e.g. 0712345678"
                         className={`input-field rounded-l-none min-w-0 ${errors.phone_number ? 'input-field-error' : ''}`}
                       />
                     </div>
                     {errors.phone_number && <p className="error-text"><AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />{errors.phone_number}</p>}
-                    <p className="text-xs text-gray-400 mt-2">Your number is kept private and used for verification only.</p>
+                    <p className="text-xs text-gray-400 mt-2">Your M-Pesa number is kept private and used for verification only.</p>
                   </div>
                 </>
               )}
@@ -426,6 +432,16 @@ export default function SurveyPage() {
               {/* STEP 4: Politics */}
               {step === 4 && (
                 <>
+                  <div>
+                    <label className="label">Preferred Presidential Candidate *</label>
+                    <input type="text"
+                      value={form.preferred_president} onChange={(e) => update('preferred_president', e.target.value)}
+                      placeholder="Enter candidate's full name"
+                      className={`input-field ${errors.preferred_president ? 'input-field-error' : ''}`}
+                    />
+                    {errors.preferred_president && <p className="error-text"><AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />{errors.preferred_president}</p>}
+                    <p className="text-xs text-gray-400 mt-2">Presidential seat — Republic of Kenya</p>
+                  </div>
                   <div>
                     <label className="label">Preferred Governor Candidate *</label>
                     <input type="text"
@@ -503,7 +519,8 @@ export default function SurveyPage() {
                         { label: 'Name',          value: form.full_name },
                         { label: 'Gender',        value: form.gender },
                         { label: 'Age Group',     value: form.age_group },
-                        { label: 'Gov. Candidate',value: form.preferred_governor },
+                        { label: 'Pres. Candidate', value: form.preferred_president },
+                        { label: 'Gov. Candidate',  value: form.preferred_governor },
                       ].map((r) => (
                         <div key={r.label} className="flex items-baseline justify-between gap-3 text-sm">
                           <span className="text-gray-400 font-medium flex-shrink-0">{r.label}</span>

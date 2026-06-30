@@ -13,18 +13,52 @@ CREATE TABLE IF NOT EXISTS public.survey_responses (
   county         TEXT                                    NOT NULL,
   constituency   TEXT                                    NOT NULL,
   ward           TEXT                                    NOT NULL,
-  full_name      TEXT                                    NOT NULL,
-  phone_number   TEXT                                    NOT NULL UNIQUE,
-  gender         TEXT                                    NOT NULL,
-  age_group      TEXT                                    NOT NULL,
-  preferred_governor TEXT                               NOT NULL,
-  support_reason TEXT                                    NOT NULL,
-  biggest_issue  TEXT                                    NOT NULL,
-  issue_details  TEXT        DEFAULT ''
+  full_name           TEXT                              NOT NULL,
+  phone_number        TEXT                              UNIQUE,
+  gender              TEXT                              NOT NULL,
+  age_group           TEXT                              NOT NULL,
+  preferred_president TEXT                              NOT NULL,
+  preferred_governor  TEXT                              NOT NULL,
+  support_reason      TEXT                              NOT NULL,
+  biggest_issue       TEXT                              NOT NULL,
+  issue_details       TEXT        DEFAULT ''
 );
 
--- If upgrading an existing database, run:
--- ALTER TABLE public.survey_responses ADD CONSTRAINT survey_responses_phone_unique UNIQUE (phone_number);
+-- Safe migrations — each block skips if already applied
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name   = 'survey_responses'
+      AND column_name  = 'preferred_president'
+  ) THEN
+    ALTER TABLE public.survey_responses
+      ADD COLUMN preferred_president TEXT NOT NULL DEFAULT '';
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name   = 'survey_responses'
+      AND column_name  = 'phone_number'
+      AND is_nullable  = 'NO'
+  ) THEN
+    ALTER TABLE public.survey_responses
+      ALTER COLUMN phone_number DROP NOT NULL;
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'survey_responses_phone_unique'
+  ) THEN
+    ALTER TABLE public.survey_responses
+      ADD CONSTRAINT survey_responses_phone_unique UNIQUE (phone_number);
+  END IF;
+END $$;
 
 -- Indexes for common filter operations
 CREATE INDEX IF NOT EXISTS idx_surveys_county    ON public.survey_responses (county);

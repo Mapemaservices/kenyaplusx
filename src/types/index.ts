@@ -6,6 +6,7 @@ export interface SurveyFormData {
   phone_number: string
   gender: string
   age_group: string
+  preferred_president: string
   preferred_governor: string
   support_reason: string
   biggest_issue: string
