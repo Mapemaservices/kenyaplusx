@@ -54,6 +54,8 @@ export default function AdminPage() {
   const [politicsCounty, setPoliticsCounty]       = useState('')
   const [expandedPresCand, setExpandedPresCand]   = useState<string | null>(null)
   const [expandedGovCand, setExpandedGovCand]     = useState<string | null>(null)
+  const [presSecOpen, setPresSecOpen]             = useState(false)
+  const [govSecOpen, setGovSecOpen]               = useState(false)
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -590,22 +592,27 @@ export default function AdminPage() {
                   <>
                     {/* ── PRESIDENTIAL RACE ── */}
                     <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-                      <div className="px-5 sm:px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+                      <button
+                        onClick={() => setPresSecOpen((v) => !v)}
+                        className="w-full px-5 sm:px-6 py-4 flex items-center justify-between hover:bg-gray-800/40 transition-colors"
+                      >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-yellow-900/40 border border-yellow-800/50 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-xl bg-yellow-900/40 border border-yellow-800/50 flex items-center justify-center flex-shrink-0">
                             <Crown className="w-5 h-5 text-yellow-400" />
                           </div>
-                          <div>
+                          <div className="text-left">
                             <h3 className="text-white font-black text-base">Presidential Race</h3>
                             <p className="text-gray-500 text-xs">
                               {politicsStats.topPresidents.length} candidate{politicsStats.topPresidents.length !== 1 ? 's' : ''} · {politicsStats.total} vote{politicsStats.total !== 1 ? 's' : ''}
                             </p>
                           </div>
                         </div>
-                        <span className="text-xs text-gray-600 hidden sm:block">Click to see county breakdown</span>
-                      </div>
+                        {presSecOpen
+                          ? <ChevronUp   className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                          : <ChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0" />}
+                      </button>
 
-                      <div className="divide-y divide-gray-800/60">
+                      {presSecOpen && <div className="border-t border-gray-800 divide-y divide-gray-800/60">
                         {politicsStats.topPresidents.map(([name, votes], rank) => {
                           const pct       = Math.round((votes / politicsStats.total) * 100)
                           const isExp     = expandedPresCand === name
@@ -664,27 +671,32 @@ export default function AdminPage() {
                             </div>
                           )
                         })}
-                      </div>
+                      </div>}
                     </div>
 
                     {/* ── GUBERNATORIAL RACE ── */}
                     <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-                      <div className="px-5 sm:px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+                      <button
+                        onClick={() => setGovSecOpen((v) => !v)}
+                        className="w-full px-5 sm:px-6 py-4 flex items-center justify-between hover:bg-gray-800/40 transition-colors"
+                      >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-green-900/40 border border-green-800/50 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-xl bg-green-900/40 border border-green-800/50 flex items-center justify-center flex-shrink-0">
                             <Building2 className="w-5 h-5 text-green-400" />
                           </div>
-                          <div>
+                          <div className="text-left">
                             <h3 className="text-white font-black text-base">Gubernatorial Race</h3>
                             <p className="text-gray-500 text-xs">
                               {politicsStats.topGovernors.length} candidate{politicsStats.topGovernors.length !== 1 ? 's' : ''} · {politicsStats.total} vote{politicsStats.total !== 1 ? 's' : ''}
                             </p>
                           </div>
                         </div>
-                        <span className="text-xs text-gray-600 hidden sm:block">Click to see constituency breakdown</span>
-                      </div>
+                        {govSecOpen
+                          ? <ChevronUp   className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                          : <ChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0" />}
+                      </button>
 
-                      <div className="divide-y divide-gray-800/60">
+                      {govSecOpen && <div className="border-t border-gray-800 divide-y divide-gray-800/60">
                         {politicsStats.topGovernors.map(([name, votes], rank) => {
                           const pct       = Math.round((votes / politicsStats.total) * 100)
                           const isExp     = expandedGovCand === name
@@ -746,7 +758,7 @@ export default function AdminPage() {
                             </div>
                           )
                         })}
-                      </div>
+                      </div>}
                     </div>
 
                     {/* ── CONSTITUENCY PARTICIPATION ── */}
