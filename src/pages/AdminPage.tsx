@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { KENYA_COUNTIES, GENDERS, AGE_GROUPS, SEAT_COLORS } from '../data/kenya'
+import { resolveGovernorName, governorMatchesQuery, KNOWN_MERU_GOVERNORS } from '../lib/candidates'
 import type { SurveyResponse, Aspirant } from '../types'
 
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'KenyaAdmin2024'
@@ -93,9 +94,10 @@ export default function AdminPage() {
     surveys.filter((s) => {
       const q = surveySearch.toLowerCase()
       return (
-        (!q || s.full_name.toLowerCase().includes(q) ||
+        (!surveySearch.trim() ||
+          s.full_name.toLowerCase().includes(q) ||
           s.county.toLowerCase().includes(q) ||
-          s.preferred_governor.toLowerCase().includes(q) ||
+          governorMatchesQuery(s.preferred_governor, surveySearch) ||
           (s.preferred_president?.toLowerCase() || '').includes(q)) &&
         (!surveyCounty || s.county === surveyCounty) &&
         (!surveyGender  || s.gender === surveyGender)
@@ -146,7 +148,9 @@ export default function AdminPage() {
 
     politicsSurveys.forEach((s) => {
       const pres = s.preferred_president?.trim() || 'Not specified'
-      const gov  = s.preferred_governor?.trim()  || 'Not specified'
+      const rawGov = s.preferred_governor?.trim() || 'Not specified'
+      // Normalise Meru candidates to canonical names to merge duplicates
+      const gov = s.county === 'Meru' ? resolveGovernorName(rawGov) || rawGov : rawGov
 
       presVotes[pres] = (presVotes[pres] || 0) + 1
       govVotes[gov]   = (govVotes[gov]   || 0) + 1
@@ -700,6 +704,7 @@ export default function AdminPage() {
                         {politicsStats.topGovernors.map(([name, votes], rank) => {
                           const pct       = Math.round((votes / politicsStats.total) * 100)
                           const isExp     = expandedGovCand === name
+                          const isVerified = KNOWN_MERU_GOVERNORS.has(name)
                           const breakdown = Object.entries(politicsStats.govByConst[name] || {})
                             .sort((a, b) => b[1] - a[1])
 
@@ -713,8 +718,15 @@ export default function AdminPage() {
                                   {rank + 1}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-baseline justify-between gap-2 mb-2">
-                                    <span className="text-white font-bold text-sm sm:text-base truncate">{name}</span>
+                                  <div className="flex items-center justify-between gap-2 mb-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className="text-white font-bold text-sm sm:text-base truncate">{name}</span>
+                                      {isVerified && (
+                                        <span className="flex-shrink-0 text-[10px] bg-green-900/50 text-green-400 border border-green-800/60 px-1.5 py-0.5 rounded-full font-semibold">
+                                          ✓ Verified
+                                        </span>
+                                      )}
+                                    </div>
                                     <span className="text-gray-400 text-xs flex-shrink-0 tabular-nums">
                                       {votes.toLocaleString()} · {pct}%
                                     </span>
